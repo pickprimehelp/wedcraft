@@ -24,15 +24,49 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - name: Create Flutter Project Structure
+      - name: Create Production Flutter Project
         run: |
           rm -rf lib pubspec.yaml
           flutter create . --platforms=android --org=com.wedcraft.app --project-name=wedcraft
           
+          # Inject Dependencies in pubspec.yaml
+          cat << 'EOF' > pubspec.yaml
+          name: wedcraft
+          description: "WedCraft Studio - Professional Wedding Design & Invoice App"
+          publish_to: 'none'
+          version: 1.0.0+1
+
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            flutter_localizations:
+              sdk: flutter
+            google_mobile_ads: ^5.1.0
+            share_plus: ^10.0.0
+            flutter_colorpicker: ^1.1.0
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^3.0.0
+
+          flutter:
+            uses-material-design: true
+          EOF
+
+          # Create Complete App Code in lib/main.dart
           cat << 'EOF' > lib/main.dart
           import 'package:flutter/material.dart';
+          import 'package:flutter/services.dart';
+          import 'package:google_mobile_ads/google_mobile_ads.dart';
+          import 'package:share_plus/share_plus.dart';
 
           void main() {
+            WidgetsFlutterBinding.ensureInitialized();
+            MobileAds.instance.initialize();
             runApp(const WedCraftApp());
           }
 
@@ -56,8 +90,46 @@ jobs:
             }
           }
 
-          class MainHomeScreen extends StatelessWidget {
+          class MainHomeScreen extends StatefulWidget {
             const MainHomeScreen({super.key});
+
+            @override
+            State<MainHomeScreen> createState() => _MainHomeScreenState();
+          }
+
+          class _MainHomeScreenState extends State<MainHomeScreen> {
+            BannerAd? _bannerAd;
+            bool _isAdLoaded = false;
+
+            @override
+            void initState() {
+              super.initState();
+              _loadBannerAd();
+            }
+
+            void _loadBannerAd() {
+              _bannerAd = BannerAd(
+                adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Test AdMob ID
+                request: const AdRequest(),
+                size: AdSize.banner,
+                listener: BannerAdListener(
+                  onAdLoaded: (_) {
+                    setState(() {
+                      _isAdLoaded = true;
+                    });
+                  },
+                  onAdFailedToLoad: (ad, err) {
+                    ad.dispose();
+                  },
+                ),
+              )..load();
+            }
+
+            @override
+            void dispose() {
+              _bannerAd?.dispose();
+              super.dispose();
+            }
 
             @override
             Widget build(BuildContext context) {
@@ -68,71 +140,92 @@ jobs:
                   backgroundColor: const Color(0xFF800020),
                   elevation: 4,
                 ),
-                body: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF1A0006), Color(0xFF050002)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Choose Design Tool",
-                          style: TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold),
+                body: Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF1A0006), Color(0xFF050002)],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
                         ),
-                        const SizedBox(height: 15),
-                        Expanded(
-                          child: GridView.count(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildToolCard(
-                                context,
-                                title: "Wedding Card",
-                                subtitle: "Interactive Design",
-                                icon: Icons.card_giftcard,
-                                color: const Color(0xFF800020),
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const CardEditorScreen()),
+                              const Text(
+                                "Choose Professional Tool",
+                                style: TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 15),
+                              Expanded(
+                                child: GridView.count(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 14,
+                                  mainAxisSpacing: 14,
+                                  children: [
+                                    _buildToolCard(
+                                      context,
+                                      title: "Wedding Card Studio",
+                                      subtitle: "Royal Card Maker",
+                                      icon: Icons.card_giftcard,
+                                      color: const Color(0xFF800020),
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const CardEditorScreen()),
+                                      ),
+                                    ),
+                                    _buildToolCard(
+                                      context,
+                                      title: "Invoice & Bill Maker",
+                                      subtitle: "Wedding Billing Tool",
+                                      icon: Icons.receipt_long,
+                                      color: Colors.indigo.shade900,
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const InvoiceMakerScreen()),
+                                      ),
+                                    ),
+                                    _buildToolCard(
+                                      context,
+                                      title: "Status & Story Maker",
+                                      subtitle: "Insta & WhatsApp",
+                                      icon: Icons.camera_alt_rounded,
+                                      color: Colors.deepOrange.shade900,
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const StatusMakerScreen()),
+                                      ),
+                                    ),
+                                    _buildToolCard(
+                                      context,
+                                      title: "Shayari & Quotes",
+                                      subtitle: "Wishes & Verses",
+                                      icon: Icons.format_quote_rounded,
+                                      color: Colors.teal.shade900,
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const ShayariQuotesScreen()),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              _buildToolCard(
-                                context,
-                                title: "Reels Generator",
-                                subtitle: "Short Invitations",
-                                icon: Icons.video_collection_rounded,
-                                color: Colors.purple.shade900,
-                                onTap: () => _showComingSoon(context, "Reels Generator"),
-                              ),
-                              _buildToolCard(
-                                context,
-                                title: "Status Maker",
-                                subtitle: "WhatsApp & Insta",
-                                icon: Icons.camera_alt_rounded,
-                                color: Colors.deepOrange.shade900,
-                                onTap: () => _showComingSoon(context, "Status Maker"),
-                              ),
-                              _buildToolCard(
-                                context,
-                                title: "Shayari & Quotes",
-                                subtitle: "Hindi & English",
-                                icon: Icons.format_quote_rounded,
-                                color: Colors.teal.shade900,
-                                onTap: () => _showComingSoon(context, "Shayari & Quotes"),
                               ),
                             ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    if (_isAdLoaded && _bannerAd != null)
+                      SizedBox(
+                        width: _bannerAd!.size.width.toDouble(),
+                        height: _bannerAd!.size.height.toDouble(),
+                        child: AdWidget(ad: _bannerAd!),
+                      ),
+                  ],
                 ),
               );
             }
@@ -149,16 +242,9 @@ jobs:
                 onTap: onTap,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.4),
+                    color: color.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.amber.withOpacity(0.6), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
@@ -166,15 +252,15 @@ jobs:
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircleAvatar(
-                          radius: 28,
+                          radius: 26,
                           backgroundColor: Colors.black38,
-                          child: Icon(icon, size: 30, color: Colors.amber),
+                          child: Icon(icon, size: 28, color: Colors.amber),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Text(
                           title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -188,17 +274,9 @@ jobs:
                 ),
               );
             }
-
-            void _showComingSoon(BuildContext context, String feature) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$feature Tool will be available in the next release!'),
-                  backgroundColor: Colors.amber.shade900,
-                ),
-              );
-            }
           }
 
+          // ================= CARD EDITOR TOOL =================
           class CardEditorScreen extends StatefulWidget {
             const CardEditorScreen({super.key});
 
@@ -207,199 +285,275 @@ jobs:
           }
 
           class _CardEditorScreenState extends State<CardEditorScreen> {
-            final TextEditingController groomController = TextEditingController(text: "Rahul");
-            final TextEditingController brideController = TextEditingController(text: "Priya");
-            final TextEditingController dateController = TextEditingController(text: "25 DECEMBER 2026");
+            final TextEditingController groom = TextEditingController(text: "Rahul Sharma");
+            final TextEditingController bride = TextEditingController(text: "Priya Verma");
+            final TextEditingController date = TextEditingController(text: "Sunday, 25 DEC 2026");
+            final TextEditingController venue = TextEditingController(text: "The Grand Palace, New Delhi");
+            final TextEditingController details = TextEditingController(text: "Haldi: 10 AM | Sangeet: 7 PM");
 
-            Color cardBgColor = const Color(0xFF2C0003);
-            Offset textOffset = const Offset(40, 130);
+            Color cardBg = const Color(0xFF2C0003);
 
             @override
             Widget build(BuildContext context) {
               return Scaffold(
                 appBar: AppBar(
-                  title: const Text('Design Wedding Card'),
+                  title: const Text('Wedding Card Editor'),
                   backgroundColor: const Color(0xFF800020),
                   actions: [
                     IconButton(
-                      icon: const Icon(Icons.file_download, color: Colors.amber),
+                      icon: const Icon(Icons.share, color: Colors.amber),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Invitation Card Saved to Gallery!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
+                        Share.share("Invitation: ${groom.text} weds ${bride.text}\nDate: ${date.text}\nVenue: ${venue.text}");
                       },
                     )
                   ],
                 ),
                 body: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      const SizedBox(height: 15),
-                      const Text(
-                        "Drag names to adjust placement",
-                        style: TextStyle(color: Colors.amber, fontSize: 12),
-                      ),
-                      const SizedBox(height: 10),
-                      Center(
-                        child: Container(
-                          width: 300,
-                          height: 400,
-                          decoration: BoxDecoration(
-                            color: cardBgColor,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFD4AF37), width: 3),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black54, blurRadius: 10, spreadRadius: 2)
-                            ],
-                          ),
-                          child: Stack(
-                            children: [
-                              const Positioned(
-                                top: 25,
-                                left: 0,
-                                right: 0,
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.favorite, color: Color(0xFFD4AF37), size: 24),
-                                    SizedBox(height: 5),
-                                    Text(
-                                      "WEDDING INVITATION",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Color(0xFFD4AF37),
-                                        fontSize: 12,
-                                        letterSpacing: 3,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Positioned(
-                                left: textOffset.dx,
-                                top: textOffset.dy,
-                                child: GestureDetector(
-                                  onPanUpdate: (details) {
-                                    setState(() {
-                                      textOffset += details.delta;
-                                    });
-                                  },
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        groomController.text,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Serif',
-                                        ),
-                                      ),
-                                      const Text(
-                                        "weds",
-                                        style: TextStyle(color: Color(0xFFD4AF37), fontSize: 18, fontStyle: FontStyle.italic),
-                                      ),
-                                      Text(
-                                        brideController.text,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Serif',
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        dateController.text,
-                                        style: const TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 1),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFD4AF37), width: 3),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.favorite, color: Color(0xFFD4AF37), size: 30),
+                            const SizedBox(height: 8),
+                            const Text("|| Shree Ganeshay Namah ||", style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12)),
+                            const SizedBox(height: 15),
+                            const Text("WEDDING INVITATION", style: TextStyle(color: Color(0xFFD4AF37), letterSpacing: 3, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 15),
+                            Text(groom.text, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const Text("weds", style: TextStyle(color: Color(0xFFD4AF37), fontSize: 18, fontStyle: FontStyle.italic)),
+                            Text(bride.text, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const Divider(color: Color(0xFFD4AF37), height: 30),
+                            Text(date.text, style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 5),
+                            Text(venue.text, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                            const SizedBox(height: 10),
+                            Text(details.text, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF141414),
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("Customization Controls", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: groomController,
-                                    decoration: const InputDecoration(
-                                      labelText: "Groom's Name",
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onChanged: (val) => setState(() {}),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    controller: brideController,
-                                    decoration: const InputDecoration(
-                                      labelText: "Bride's Name",
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onChanged: (val) => setState(() {}),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: dateController,
-                              decoration: const InputDecoration(
-                                labelText: "Date & Venue",
-                                border: OutlineInputBorder(),
-                              ),
-                              onChanged: (val) => setState(() {}),
-                            ),
-                            const SizedBox(height: 15),
-                            const Text("Background Theme Color", style: TextStyle(fontSize: 13, color: Colors.grey)),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildColorBtn("Maroon", const Color(0xFF2C0003)),
-                                _buildColorBtn("Emerald", const Color(0xFF002C1E)),
-                                _buildColorBtn("Royal Purple", const Color(0xFF1E002C)),
-                                _buildColorBtn("Classic Dark", const Color(0xFF121212)),
-                              ],
-                            )
-                          ],
-                        ),
+                      TextField(controller: groom, decoration: const InputDecoration(labelText: "Groom Name", border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
+                      const SizedBox(height: 10),
+                      TextField(controller: bride, decoration: const InputDecoration(labelText: "Bride Name", border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
+                      const SizedBox(height: 10),
+                      TextField(controller: date, decoration: const InputDecoration(labelText: "Date & Time", border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
+                      const SizedBox(height: 10),
+                      TextField(controller: venue, decoration: const InputDecoration(labelText: "Venue Address", border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
+                      const SizedBox(height: 10),
+                      TextField(controller: details, decoration: const InputDecoration(labelText: "Event Timeline", border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
+                      const SizedBox(height: 15),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(onPressed: () => setState(() => cardBg = const Color(0xFF2C0003)), child: const Text("Royal Red")),
+                          ElevatedButton(onPressed: () => setState(() => cardBg = const Color(0xFF002C1E)), child: const Text("Emerald")),
+                          ElevatedButton(onPressed: () => setState(() => cardBg = const Color(0xFF1E002C)), child: const Text("Purple")),
+                        ],
                       )
                     ],
                   ),
                 ),
               );
             }
+          }
 
-            Widget _buildColorBtn(String title, Color color) {
-              return ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  side: const BorderSide(color: Colors.amber, width: 1),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          // ================= INVOICE MAKER TOOL =================
+          class InvoiceMakerScreen extends StatefulWidget {
+            const InvoiceMakerScreen({super.key});
+
+            @override
+            State<InvoiceMakerScreen> createState() => _InvoiceMakerScreenState();
+          }
+
+          class _InvoiceMakerScreenState extends State<InvoiceMakerScreen> {
+            final TextEditingController client = TextEditingController(text: "Ramesh Sharma");
+            final TextEditingController service1 = TextEditingController(text: "Wedding Card Printing (500 Pcs)");
+            final TextEditingController amount1 = TextEditingController(text: "15000");
+            final TextEditingController service2 = TextEditingController(text: "Photography & Video Shooting");
+            final TextEditingController amount2 = TextEditingController(text: "25000");
+
+            double get grandTotal {
+              double a1 = double.tryParse(amount1.text) ?? 0;
+              double a2 = double.tryParse(amount2.text) ?? 0;
+              return a1 + a2;
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text("Wedding Invoice Bill"), backgroundColor: Colors.indigo.shade900),
+                body: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.amber)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("WEDCRAFT STUDIO INVOICE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.amber)),
+                            const Divider(),
+                            Text("Client: ${client.text}", style: const TextStyle(fontSize: 16)),
+                            const SizedBox(height: 10),
+                            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(service1.text), Text("₹${amount1.text}")]),
+                            const SizedBox(height: 5),
+                            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(service2.text), Text("₹${amount2.text}")]),
+                            const Divider(height: 25),
+                            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("TOTAL AMOUNT:", style: TextStyle(fontWeight: FontWeight.bold)), Text("₹${grandTotal.toStringAsFixed(0)}", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green))]),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(controller: client, decoration: const InputDecoration(labelText: "Client Name", border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(flex: 2, child: TextField(controller: service1, decoration: const InputDecoration(labelText: "Service 1", border: OutlineInputBorder()), onChanged: (_) => setState(() {}))),
+                          const SizedBox(width: 8),
+                          Expanded(child: TextField(controller: amount1, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Amount (₹)", border: OutlineInputBorder()), onChanged: (_) => setState(() {}))),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(flex: 2, child: TextField(controller: service2, decoration: const InputDecoration(labelText: "Service 2", border: OutlineInputBorder()), onChanged: (_) => setState(() {}))),
+                          const SizedBox(width: 8),
+                          Expanded(child: TextField(controller: amount2, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Amount (₹)", border: OutlineInputBorder()), onChanged: (_) => setState(() {}))),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black, minimumSize: const Size(double.infinity, 50)),
+                        icon: const Icon(Icons.share),
+                        label: const Text("SHARE INVOICE BILL", style: TextStyle(fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          Share.share("WEDCRAFT STUDIO INVOICE\nClient: ${client.text}\nService 1: ${service1.text} - ₹${amount1.text}\nService 2: ${service2.text} - ₹${amount2.text}\nTotal: ₹${grandTotal.toStringAsFixed(0)}");
+                        },
+                      )
+                    ],
+                  ),
                 ),
-                onPressed: () => setState(() => cardBgColor = color),
-                child: Text(title, style: const TextStyle(fontSize: 11, color: Colors.white)),
+              );
+            }
+          }
+
+          // ================= STATUS & STORY MAKER =================
+          class StatusMakerScreen extends StatefulWidget {
+            const StatusMakerScreen({super.key});
+
+            @override
+            State<StatusMakerScreen> createState() => _StatusMakerScreenState();
+          }
+
+          class _StatusMakerScreenState extends State<StatusMakerScreen> {
+            final TextEditingController textCtrl = TextEditingController(text: "Save The Date\n25.12.2026\n#RahulWedsPriya");
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text("Status & Story Maker"), backgroundColor: Colors.deepOrange.shade900),
+                body: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 350,
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Colors.deepOrange, Colors.purple]),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(
+                          child: Text(
+                            textCtrl.text,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 10, color: Colors.black)]),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: textCtrl,
+                        maxLines: 3,
+                        decoration: const InputDecoration(labelText: "Status Text / Quote", border: OutlineInputBorder()),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 15),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, minimumSize: const Size(double.infinity, 50)),
+                        icon: const Icon(Icons.share, color: Colors.white),
+                        label: const Text("SHARE ON WHATSAPP STATUS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        onPressed: () => Share.share(textCtrl.text),
+                      )
+                    ],
+                  ),
+                ),
+              );
+            }
+          }
+
+          // ================= SHAYARI & QUOTES =================
+          class ShayariQuotesScreen extends StatelessWidget {
+            const ShayariQuotesScreen({super.key});
+
+            final List<String> quotes = const [
+              "mubarak ho tumko ye shaadi tumhari,\nsada khush rahe ye jodi tumhari! ✨❤️",
+              "mehndi se sajenge haath, shahnaiyon ki hogi raat,\nmubarak ho aapko naye safar ki shuruaat! 💍🌹",
+              "do dil mil rahe hain is haseen mod par,\nmubarak ho shaadi ka ye khoobsurat tyohar! 🎉❤️",
+              "Wedding Invitation: Please join us to celebrate the wedding of our loved ones!"
+            ];
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text("Wedding Shayari & Wishes"), backgroundColor: Colors.teal.shade900),
+                body: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: quotes.length,
+                  itemBuilder: (context, index) {
+                    return Card(
+                      color: Colors.teal.shade900.withOpacity(0.4),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: const BorderSide(color: Colors.amber)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            Text(quotes[index], textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, height: 1.4)),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.copy, color: Colors.amber),
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: quotes[index]));
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Copied to Clipboard!")));
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.share, color: Colors.green),
+                                  onPressed: () => Share.share(quotes[index]),
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               );
             }
           }
