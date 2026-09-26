@@ -26,13 +26,16 @@ jobs:
 
       - name: Create Production Flutter Project
         run: |
-          rm -rf lib pubspec.yaml android/app/build.gradle
+          rm -rf lib pubspec.yaml
           flutter create . --platforms=android --org=com.wedcraft.app --project-name=wedcraft
           
-          # Fix Android MinSDK and Dependencies
+          # Fix MinSDK Version
           sed -i 's/minSdkVersion.*/minSdkVersion 21/' android/app/build.gradle
+
+          # Add AdMob App ID in AndroidManifest.xml
+          sed -i '/<application/a \        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>' android/app/src/main/AndroidManifest.xml
           
-          # Inject Dependencies in pubspec.yaml
+          # Inject Dependencies
           cat << 'EOF' > pubspec.yaml
           name: wedcraft
           description: "WedCraft Studio - Professional Wedding Design & Invoice App"
@@ -44,8 +47,6 @@ jobs:
 
           dependencies:
             flutter:
-              sdk: flutter
-            flutter_localizations:
               sdk: flutter
             google_mobile_ads: ^5.1.0
             share_plus: ^10.0.0
@@ -59,7 +60,7 @@ jobs:
             uses-material-design: true
           EOF
 
-          # Create Complete App Code in lib/main.dart
+          # Create Complete Main App Code
           cat << 'EOF' > lib/main.dart
           import 'package:flutter/material.dart';
           import 'package:flutter/services.dart';
