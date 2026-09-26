@@ -26,8 +26,11 @@ jobs:
 
       - name: Create Production Flutter Project
         run: |
-          rm -rf lib pubspec.yaml
+          rm -rf lib pubspec.yaml android/app/build.gradle
           flutter create . --platforms=android --org=com.wedcraft.app --project-name=wedcraft
+          
+          # Fix Android MinSDK and Dependencies
+          sed -i 's/minSdkVersion.*/minSdkVersion 21/' android/app/build.gradle
           
           # Inject Dependencies in pubspec.yaml
           cat << 'EOF' > pubspec.yaml
@@ -46,7 +49,6 @@ jobs:
               sdk: flutter
             google_mobile_ads: ^5.1.0
             share_plus: ^10.0.0
-            flutter_colorpicker: ^1.1.0
 
           dev_dependencies:
             flutter_test:
@@ -109,7 +111,7 @@ jobs:
 
             void _loadBannerAd() {
               _bannerAd = BannerAd(
-                adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Test AdMob ID
+                adUnitId: 'ca-app-pub-3940256099942544/6300978111',
                 request: const AdRequest(),
                 size: AdSize.banner,
                 listener: BannerAdListener(
@@ -276,7 +278,6 @@ jobs:
             }
           }
 
-          // ================= CARD EDITOR TOOL =================
           class CardEditorScreen extends StatefulWidget {
             const CardEditorScreen({super.key});
 
@@ -366,7 +367,6 @@ jobs:
             }
           }
 
-          // ================= INVOICE MAKER TOOL =================
           class InvoiceMakerScreen extends StatefulWidget {
             const InvoiceMakerScreen({super.key});
 
@@ -447,7 +447,6 @@ jobs:
             }
           }
 
-          // ================= STATUS & STORY MAKER =================
           class StatusMakerScreen extends StatefulWidget {
             const StatusMakerScreen({super.key});
 
@@ -503,7 +502,6 @@ jobs:
             }
           }
 
-          // ================= SHAYARI & QUOTES =================
           class ShayariQuotesScreen extends StatelessWidget {
             const ShayariQuotesScreen({super.key});
 
